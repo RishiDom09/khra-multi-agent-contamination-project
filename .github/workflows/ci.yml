@@ -1,0 +1,43 @@
+# Contract CI — runs on every push and pull request.
+#
+# Everything here runs in MOCK MODE (KHRA_MOCK=1): deterministic offline model
+# stand-ins, so CI needs NO API keys and costs nothing. A PR goes green only if
+# every discovered architecture satisfies the plug-in contract AND the full
+# pipeline (loader -> architectures -> two-pass scoring audit) runs end to end.
+#
+# NOTE FOR TEAMMATES: you do not need to edit this file. Your architecture is
+# picked up automatically once its `INCOMPLETE = True` line is removed.
+
+name: contract-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    env:
+      KHRA_MOCK: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Contract compliance (offline, synthetic questions)
+        run: python tests/test_contract.py
+
+      - name: End-to-end mock smoke run (downloads MINT data, no API calls)
+        run: python run_experiment.py --smoke
+
+      - name: Rebuild results from transcripts (audit must be clean)
+        run: python run_experiment.py --smoke --analyze-only
