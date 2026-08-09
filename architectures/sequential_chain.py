@@ -1,20 +1,4 @@
-"""Sequential Chain — OWNER: Arnav.
-
-Topology from Arnav's sequential_chain_team.py, re-implemented on the shared
-harness: a fixed chain Researcher -> Writer -> Editor. Each seat is a standard Agent
-that answers the question; each later seat sees ONLY the previous seat's
-answer + rationale as context (the chain handoff — and the only channel
-contamination can propagate through). The Editor's answer is the team's final.
-
-Seat NAMES keep Arnav's design; the one-sentence ROLE WORDINGS reuse
-dynamic_team's exact three sentences, so topology — not prompt wording — is
-the variable under test.
-
-INFLUENCE_ORDER: the proposal names "a middle agent" the most structurally
-influential seat in a chain (it receives upstream context AND feeds every
-downstream seat), so the Writer is seeded first; the head of the chain
-(Researcher, poisons everything downstream) is second.
-"""
+"""Sequential Chain"""
 
 from __future__ import annotations
 
@@ -53,7 +37,6 @@ def _handoff(prev: dict[str, Any]) -> str:
 
 
 def _build_graph(agents: list[Agent]):
-    """Mirror of Arnav's graph: researcher -> writer -> editor -> END."""
     graph = StateGraph(ChainState)
 
     def make_node(idx: int, agent: Agent):
