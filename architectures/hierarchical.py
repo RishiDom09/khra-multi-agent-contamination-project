@@ -1,27 +1,4 @@
-"""Hierarchical Team — OWNER: Arnav.
-
-Topology from Arnav's hierarchical_team.py, re-implemented on the shared
-harness: a Coordinator delegates to
-two workers and makes the team's final decision from their reports, with a
-bounded send-it-back loop preserving his supervisor's dynamic routing.
-
-Flow (mirrors his supervisor -> worker -> supervisor structure):
-  1. Both workers answer independently.
-  2. Coordinator routing: if the workers disagree (or either abstained), each
-     worker is sent back once to reconsider with the other's answer as context
-     — the "supervisor returns work to a worker" loop, bounded at one pass.
-  3. The Coordinator answers the question itself given the workers' final
-     reports; its answer IS the team's final decision ("the coordinator makes
-     the final decision from their reports" — proposal).
-
-INFLUENCE_ORDER: the proposal names "the coordinator in Hierarchical" as the
-most structurally influential seat — it makes the final decision — so the
-Coordinator is seeded first; workers follow.
-
-ANSWERING_AGENTS: all three — the workers report answers and the coordinator's
-answer is the final decision, so each holds a position that propagation can
-count.
-"""
+"""Hierarchical Team"""
 
 from __future__ import annotations
 
