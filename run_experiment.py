@@ -13,8 +13,10 @@ Cross-model comparability is by construction: every model answers the identical
 full set, with identical (seeded) option shuffles and contamination text — so
 per-question results pair across models with no manifest bookkeeping.
 
-Each run writes one JSON transcript per cell into ``logs/<date>_<model>/`` and
-an accuracy + propagation analysis into ``results/<date>_<model>/``. Logging is
+Each run writes one JSON transcript per cell into
+``logs/<date>_<model>_<arch-tag>/`` and an accuracy + propagation analysis
+into ``results/<date>_<model>_<arch-tag>/`` — the arch-tag names the
+multi-agent system(s) the run covers (e.g. ``hier``, ``adv-base-dyn``). Logging is
 RESUMABLE: transcript filenames are deterministic and a rerun skips every cell
 it already has, so an interrupted run picks up where it stopped. ``--new-run``
 starts a fresh folder; ``--force`` re-runs cells in place.
@@ -217,8 +219,9 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     p.add_argument("--force", action="store_true",
                    help="re-run cells even if a transcript already exists")
     p.add_argument("--new-run", action="store_true",
-                   help="start a FRESH run folder (logs/<today>_<model>/) instead "
-                        "of resuming the most recent one for this model")
+                   help="start a FRESH run folder (logs/<today>_<model>_<archs>/) "
+                        "instead of resuming the most recent one for this "
+                        "model + architecture selection")
     p.add_argument("--run", default=None, metavar="NAME",
                    help="target a specific run folder by name (e.g. "
                         "'2026-07-25_qwen'), mainly for --analyze-only on an "
@@ -370,15 +373,16 @@ def audit_scoring(
 
 
 def _running_accuracy(rows: list[dict[str, Any]]) -> str:
+    """Live accuracy per architecture, covering whatever architectures are in
+    the run (auto-discovered plug-ins included — unknown names get truncated)."""
     by_arch: dict[str, list[bool]] = {}
     for r in rows:
         by_arch.setdefault(r["architecture"], []).append(r["accuracy"])
     parts = []
-    for arch in ("baseline", "dynamic_team", "adversarial_team"):
-        accs = by_arch.get(arch)
-        if accs:
-            short = {"baseline": "base", "dynamic_team": "dyn", "adversarial_team": "adv"}[arch]
-            parts.append(f"{short} {sum(accs) / len(accs):.0%}")
+    for arch in sorted(by_arch):
+        accs = by_arch[arch]
+        short = architectures.ARCH_SHORT.get(arch, arch[:6])
+        parts.append(f"{short} {sum(accs) / len(accs):.0%}")
     return "  ".join(parts)
 
 
@@ -411,7 +415,9 @@ def main(argv: Optional[list[str]] = None) -> None:
     args = _parse_args(argv)
 
 
-    config.set_model(args.model)
+    # Run folders are named <date>_<model>_<arch-tag> so every folder says
+    # which multi-agent system(s) it holds (e.g. 2026-08-08_deepseek_hier).
+    config.set_model(args.model, arch_tag=architectures.arch_tag(args.architectures))
     if args.run:
         config.set_run(args.run)
     elif args.new_run:

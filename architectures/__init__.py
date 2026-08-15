@@ -84,3 +84,28 @@ ANSWERING: dict[str, list[str]] = {
     name: list(importlib.import_module(f"{__name__}.{name}").ANSWERING_AGENTS)
     for name in REGISTRY
 }
+
+# Short display/folder labels per architecture. Plug-ins not listed here fall
+# back to a truncated module name, so adding an architecture never requires
+# touching this file — add an entry only if you want a nicer label.
+ARCH_SHORT: dict[str, str] = {
+    "baseline": "base",
+    "dynamic_team": "dyn",
+    "adversarial_team": "adv",
+    "hierarchical": "hier",
+    "sequential_chain": "seq",
+    "hub_and_spoke": "hub",
+    "shared_workspace": "shared",
+    "redundant": "redun",
+    "debate": "debate",
+}
+
+
+def arch_tag(names: list[str]) -> str:
+    """Folder-name tag naming the multi-agent system(s) a run covers.
+
+    E.g. ``['hierarchical']`` -> ``'hier'`` and the default three-architecture
+    sweep -> ``'adv-base-dyn'``. Sorted so the same selection always maps to
+    the same run folder — that is what lets an interrupted run resume.
+    """
+    return "-".join(ARCH_SHORT.get(n, n[:6]) for n in sorted(names))

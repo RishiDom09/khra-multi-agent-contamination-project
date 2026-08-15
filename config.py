@@ -15,13 +15,19 @@ load_dotenv()
 
 MODELS: dict[str, dict[str, Any]] = {
     "opus": {
-        "provider": "bedrock",
-        "model_id": "anthropic.claude-opus-5",
+        "provider": "openrouter",
+        "model_id": "anthropic/claude-opus-5",
+        # Claude Opus 5 rejects the temperature param (400 if sent); its
+        # always-on thinking counts against max_tokens, so give it headroom.
+        "send_temperature": False,
+        "max_tokens": 8192,
     },
     "sol": {
-        "provider": "bedrock-openai",
-        "model_id": "openai.gpt-5.6-sol",
+        "provider": "openrouter",
+        "model_id": "openai/gpt-5.6-sol",
+        # Reasoning model: rejects sampling params; same headroom logic.
         "send_temperature": False,
+        "max_tokens": 8192,
     },
     "deepseek": {
         "provider": "azure",
@@ -83,6 +89,8 @@ def has_credentials(spec: dict[str, Any]) -> bool:
         return _usable(os.getenv(spec["endpoint_env"])) and _usable(
             os.getenv(spec["key_env"])
         )
+    if provider == "openrouter":
+        return _usable(os.getenv("OPENROUTER_API_KEY"))
     return False
 
 
@@ -139,6 +147,19 @@ def require_bedrock_openai() -> tuple[str, str]:
     return base_url, key
 
 
+def require_openrouter() -> tuple[str, str]:
+    """(base_url, api_key) for OpenRouter's OpenAI-compatible endpoint."""
+    key = os.getenv("OPENROUTER_API_KEY")
+    if not _usable(key):
+        raise SystemExit(
+            "OPENROUTER_API_KEY is not set. Add your OpenRouter key "
+            "(https://openrouter.ai/keys) to .env (see .env.example). To test "
+            "offline, run with KHRA_MOCK=1."
+        )
+    base_url = os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1"
+    return base_url, key  # type: ignore[return-value]
+
+
 def require_azure(spec: dict[str, Any]) -> tuple[str, str]:
     endpoint = os.getenv(spec["endpoint_env"])
     key = os.getenv(spec["key_env"])
@@ -175,7 +196,18 @@ DATA_DIR: str = "data"         # MINT dataset JSON cached here
 LOG_ROOT: str = "logs"
 RESULTS_ROOT: str = "results"
 
-RUN_TAG: str = "mock" if MOCK_MODE else MODEL_KEY
+# Which multi-agent system(s) the run covers (e.g. "hier", "adv-base-dyn"),
+# set by run_experiment via set_model(). Baked into every run-folder name so
+# logs/results are self-describing: <date>_<model>_<arch-tag>.
+ARCH_TAG: str | None = None
+
+
+def _run_tag() -> str:
+    base = "mock" if MOCK_MODE else MODEL_KEY
+    return f"{base}_{ARCH_TAG}" if ARCH_TAG else base
+
+
+RUN_TAG: str = _run_tag()
 
 _RUN_NAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_(.+?)(?:_(\d+))?$")
 
@@ -233,10 +265,12 @@ def start_new_run() -> str:
     return set_run(_new_run_name(RUN_TAG))
 
 
-def set_model(key: str) -> str:
+def set_model(key: str, arch_tag: str | None = None) -> str:
     """Activate a registry entry (the --model flag): model, provider, mock
-    mode, and the run folders all follow. Returns the resolved run name."""
-    global MODEL_KEY, MODEL_SPEC, PROVIDER, MODEL_ID, MOCK_MODE, RUN_TAG
+    mode, and the run folders all follow. ``arch_tag`` names the multi-agent
+    system(s) being run (see architectures.arch_tag) and becomes part of the
+    run-folder name. Returns the resolved run name."""
+    global MODEL_KEY, MODEL_SPEC, PROVIDER, MODEL_ID, MOCK_MODE, RUN_TAG, ARCH_TAG
     if key not in MODELS:
         raise SystemExit(
             f"Unknown model key {key!r}. Valid keys: {', '.join(sorted(MODELS))}"
@@ -246,7 +280,8 @@ def set_model(key: str) -> str:
     PROVIDER = MODEL_SPEC["provider"]
     MODEL_ID = MODEL_SPEC["model_id"]
     MOCK_MODE = _mock_mode_for(MODEL_SPEC)
-    RUN_TAG = "mock" if MOCK_MODE else MODEL_KEY
+    ARCH_TAG = arch_tag
+    RUN_TAG = _run_tag()
     return set_run(os.getenv("KHRA_RUN") or _resolve_run_name(RUN_TAG))
 
 

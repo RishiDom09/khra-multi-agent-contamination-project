@@ -151,6 +151,22 @@ def _build_llm(model_id: str) -> Any:
             kwargs["temperature"] = config.LLM_TEMPERATURE
         return ChatOpenAI(**kwargs)
 
+    if provider == "openrouter":
+        # OpenRouter's unified OpenAI-compatible endpoint (Claude Opus 5,
+        # GPT-5.6 Sol). One key covers every model; no per-model access grants.
+        from langchain_openai import ChatOpenAI
+
+        base_url, api_key = config.require_openrouter()
+        kwargs = dict(
+            model=model_id,
+            base_url=base_url,
+            api_key=api_key,
+            max_tokens=max_tokens,
+        )
+        if send_temperature:
+            kwargs["temperature"] = config.LLM_TEMPERATURE
+        return ChatOpenAI(**kwargs)
+
     if provider == "azure":
         endpoint, key = config.require_azure(spec)
         if "/openai/" in endpoint:
