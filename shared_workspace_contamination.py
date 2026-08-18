@@ -38,6 +38,7 @@ import json
 import getpass
 import time
 import hashlib
+from matplotlib.style import context
 import requests
 from requests.exceptions import HTTPError
 from dotenv import load_dotenv
@@ -393,7 +394,7 @@ def run_shared_workspace(
     option_texts = normalize_question(item).get("options")
     correct = normalize_question(item).get("correct")
     context = _condition_context(item, condition, questions, item_index)
-    source_index = _source_agent_index(item_index, len(agents), bool(context))
+    source_index = 0 if bool(context) else None
     reset_workspace()  # start clean for each run
 
     if source_index is None:
