@@ -116,7 +116,10 @@ def aggregate(rows: list[dict[str, Any]], keys: tuple[str, ...]) -> list[dict[st
                     r["final_answer_contaminated"] for r in group
                 ),
                 "abstain_rate": _mean(
-                    r["n_abstain"] / r["n_answering_agents"] for r in group
+                     r["n_abstain"] / r["n_answering_agents"]
+                     if r["n_answering_agents"] > 0
+                     else None
+                     for r in group
                 ),
             }
         )

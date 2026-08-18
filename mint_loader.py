@@ -259,7 +259,11 @@ VERIFICATION_CASES: list[tuple[str, str, str]] = [
 ]
 
 
-def verify(strategy: str = "other", verbose: bool = False) -> None:
+def verify(
+    strategy: str = "other",
+    verbose: bool = False,
+    categories: Optional[list[str]] = None,
+) -> None:
     """Check ground truth for EVERY item, not a hand-picked few. Raises on mismatch.
 
     The earlier version asserted three hand-picked items and passed while ~50% of
@@ -270,7 +274,11 @@ def verify(strategy: str = "other", verbose: bool = False) -> None:
       exactly the option text the gold file specifies;
     * non-gold subsets: the legacy spot-checks still apply.
     """
-    for category, spec in DATASETS.items():
+    categories_to_verify = categories or config.ACTIVE_CATEGORIES
+
+    for category in categories_to_verify:
+        spec = DATASETS[category]
+
         gold = gold_labels(spec)
         items = load_category(category, strategy=strategy, keep_unlabeled=True)
 
@@ -345,7 +353,7 @@ def load_questions(
     options, correct letter, and misinfo text for every question. Pass
     ``shuffle_options=False`` for the literal unshuffled mapping.
     """
-    verify(strategy=strategy)
+    verify(strategy=strategy, categories=categories)
 
     selected: list[dict[str, Any]] = []
     for category in categories or config.ACTIVE_CATEGORIES:

@@ -53,6 +53,9 @@ SETUPS: dict[str, tuple[Callable[..., dict[str, Any]], list[str]]] = (
     architectures.REGISTRY
 )
 
+print("REDUNDANT RUNNER:", SETUPS["redundant"][0])
+print("REDUNDANT RUNNER MODULE:", SETUPS["redundant"][0].__module__)
+
 # How many agents each condition contaminates. Seats are taken from the front of
 # the architecture's INFLUENCE_ORDER, i.e. the most structurally influential
 # seats first (dynamic: the most-consulted agent; adversarial: a Worker, never
@@ -308,6 +311,11 @@ def run_one_question(
                     out.rate_limited = True
 
             transcript.setdefault("condition", cond)
+
+            print("\n===== DEBUG TRANSCRIPT =====")
+            print(transcript)
+            print("============================\n")
+
             out.rows.append(analysis.metrics_for_run(transcript, question))
     return out
 
